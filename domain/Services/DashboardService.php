@@ -1,49 +1,76 @@
 <?php
 
-namespace domain\services;
+namespace domain\Services;
 
 use App\Models\Products;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
-class DashboardService {
-    protected $product;
+class DashboardService
+{
+    protected Products $product;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->product = new Products();
     }
 
-    public function get($product_id) {
-        return $this->product->find($product_id);
+    public function get(int $productId): Products
+    {
+        return $this->product->findOrFail($productId);
     }
 
-    public function all() {
-        return $this->product->all();
+    public function all()
+    {
+        return $this->product->newQuery()->latest()->get();
     }
 
-    public function store($data) {
-        $requestData = $data->all();
-        $fileName = time().$data->file('image')->getClientOriginalName();
-        $path = $data->file('image')->storeAs('images', $fileName, 'public');
-        $requestData["image"] = '/storage/'.$path;
-        Products::create($requestData);
+    public function store(array $data, UploadedFile $image): Products
+    {
+        $path = $image->store('images', 'public');
+
+        return Products::create([
+            'name' => $data['name'],
+            'price' => $data['price'],
+            'image' => '/storage/' . $path,
+            'status' => 'inactive',
+        ]);
     }
 
-    public function delete($product_id) {
-        $product = $this->product->find($product_id);
+    public function delete(int $productId): void
+    {
+        $product = $this->product->findOrFail($productId);
+        $this->deleteImage($product->image);
         $product->delete();
     }
 
-    public function status($product_id) {
-        $product = $this->product->find($product_id);
-        $product->status = "active";
-        $product->update();
+    public function status(int $productId): Products
+    {
+        $product = $this->product->findOrFail($productId);
+        $product->status = $product->status === 'active' ? 'inactive' : 'active';
+        $product->save();
+
+        return $product;
     }
 
-    public function update(array $data, $product_id) {
-        $product = $this->product->find($product_id);
-        $product->update($this->edit($product, $data));
+    public function update(array $data, int $productId): Products
+    {
+        $product = $this->product->findOrFail($productId);
+        $product->update([
+            'name' => $data['name'],
+            'price' => $data['price'],
+        ]);
+
+        return $product;
     }
 
-    protected function edit(Products $product, $data) {
-        return array_merge($product->toArray(), $data);
+    protected function deleteImage(?string $image): void
+    {
+        if (!$image || !str_starts_with($image, '/storage/')) {
+            return;
+        }
+
+        $path = substr($image, strlen('/storage/'));
+        Storage::disk('public')->delete($path);
     }
 }
