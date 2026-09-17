@@ -1,64 +1,178 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
+# Product Manager 🧃
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+> a tiny 2022 Laravel dashboard for adding products, uploading images, changing status and learning where “just CRUD” starts turning into app structure.
 
-## About Laravel
+This is a small Laravel 9 project I built while experimenting with **Eloquent, Blade, Jetstream authentication, file storage and a service/facade layer**.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+It is not trying to be Shopify. That is kind of the point.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+The app has one focused job: give a signed-in user a simple dashboard where products can be created, edited, activated/deactivated and deleted.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## what it does
 
-## Learning Laravel
+```text
+sign in
+   │
+   ▼
+product dashboard
+   │
+   ├── add product + image
+   ├── edit name / price
+   ├── active ↔ inactive
+   └── delete product + stored image
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Each product currently has:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 2000 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```text
+name
+image
+price
+status
+created_at
+updated_at
+```
 
-## Laravel Sponsors
+New products start as `inactive` and can be toggled active from the dashboard.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+## stack
 
-### Premium Partners
+`PHP 8` · `Laravel 9` · `Eloquent` · `Blade`
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[OP.GG](https://op.gg)**
-- **[WebReinvent](https://webreinvent.com/?utm_source=laravel&utm_medium=github&utm_campaign=patreon-sponsors)**
-- **[Lendio](https://lendio.com)**
+`Laravel Jetstream` · `Sanctum` · `Livewire`
 
-## Contributing
+`Bootstrap 5` · `jQuery` · `MySQL` · `Laravel Storage`
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+The repository also contains the Laravel Vite/Tailwind/Alpine tooling that came with the project setup, although the actual product dashboard uses Bootstrap and a small amount of jQuery.
 
-## Code of Conduct
+## the architecture experiment
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+The part I was really playing with here was putting product behavior somewhere other than the controller.
 
-## Security Vulnerabilities
+```text
+HTTP request
+    │
+    ▼
+DashboardController
+    │
+    ▼
+DashboardFacade
+    │
+    ▼
+DashboardService
+    │
+    ├── Eloquent Products model
+    └── public storage disk
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+The controller now owns HTTP concerns such as request validation and redirects. The service owns the product/storage lifecycle.
 
-## License
+For the deeper walkthrough, including why the facade is arguably unnecessary for a project this small, see [`docs/engineering.md`](docs/engineering.md).
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## public-repo cleanup
+
+The original version was intentionally minimal and had a few classic early CRUD shortcuts. I cleaned those up while keeping the project recognizable:
+
+- dashboard routes now require Jetstream authentication
+- create/update requests are validated server-side
+- delete/update/status mutations use `DELETE` / `PATCH` instead of `GET`
+- product lookups use `findOrFail()`
+- image files use Laravel's generated storage names rather than concatenating original filenames
+- deleting a product also deletes its stored image
+- status now actually toggles `active ↔ inactive`
+- mass updates only use validated fields
+- dashboard forms show validation and success feedback
+- `.env.example` now matches the project name/database/storage setup
+
+This is still a small 2022 learning app, not a claim of production inventory architecture.
+
+## run it locally
+
+Requirements:
+
+- PHP 8+
+- Composer
+- MySQL / MariaDB
+- Node.js + npm
+
+Install dependencies:
+
+```bash
+composer install
+npm install
+```
+
+Create your local environment:
+
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+Create a MySQL database called `product_manager` (or change `DB_DATABASE`), then run:
+
+```bash
+php artisan migrate
+php artisan storage:link
+```
+
+Build frontend assets:
+
+```bash
+npm run dev
+```
+
+And start Laravel:
+
+```bash
+php artisan serve
+```
+
+Jetstream provides the account flow. Register/sign in, then the app redirects to `/dashboard`.
+
+## image lifecycle
+
+Images are stored on Laravel's `public` disk:
+
+```text
+upload
+  │
+  ▼
+storage/app/public/images/<generated name>
+  │
+  ▼
+public/storage/... via artisan storage:link
+```
+
+The database stores the `/storage/...` path used by Blade.
+
+When a product is deleted, the service strips that public prefix and removes the corresponding file from the storage disk before deleting the database record.
+
+## HTTP flow
+
+The cleaned-up product endpoints are intentionally boring in the good way:
+
+```text
+GET     /dashboard
+POST    /dashboard/products
+GET     /dashboard/products/edit?product_id=...
+PATCH   /dashboard/products/{id}
+PATCH   /dashboard/products/{id}/status
+DELETE  /dashboard/products/{id}
+```
+
+All of them sit behind the Jetstream authenticated/verified middleware group.
+
+## if i rebuilt it now
+
+For a project this size I would probably make the architecture **simpler**, not more elaborate.
+
+The facade layer is useful as an experiment, but a modern version could inject a `ProductService` directly into the controller, use route-model binding, dedicated Form Requests, PHP enums/casts for status, pagination, image replacement, feature tests and probably Livewire or a small SPA-style interaction instead of jQuery-loaded modal HTML.
+
+The useful lesson from this repo is that extra layers only earn their place when they create a real boundary.
+
+## project status
+
+Historical side project / Laravel learning experiment.
+
+Kept public because it is a compact snapshot of me poking at backend structure before most of my GitHub became mobile apps.
